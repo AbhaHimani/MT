@@ -1,65 +1,50 @@
-format short
 clc
 clear all
-
-variables={'x1','x2','x3','s1','s2','sol'};
-cost=[-2 0 -1 0 0 0];
-Info=[-1 -1 1;-1 2 -4];
-b=[-5;-8];
-s=eye(size(Info,1));
-
-A=[Info s b]
-BV=[];
-
-for i=1:size(s,2)
-    for j=1:size(A,2)
-        if s(:,i)==A(:,j)
-            BV=[BV j];
-        end
-    end
-end
-BV
-
-
-B=A(:,BV)
-A=inv(B)*A;
-ZjCj=cost(BV)*A-cost
-
-Simplex=[ZjCj;A]
-Simplex=array2table(Simplex);
-Simplex.Properties.VariableNames(1:size(Simplex,2))=variables
-RUN=true;
-while RUN
-sol=A(:,end)
-
-if any(sol<0)
-    fprintf('Not feasible')
-    [leavVar,pvtrow]=min(sol);
-
-    row=A(pvtrow,1:end-1)
-    ZJ=ZjCj(:,1:end-1)
-    for i=1:size(row,2)
-        if row(i)<0
-            ratio(i)=abs(ZJ(i)./row(i))
-        else
-            ratio(i)=inf;
-        end
-    end
-    [minVal,pvtcol]=min(ratio);
-    BV(pvtrow)=pvtcol;
-
-    B=A(:,BV)
-A=inv(B)*A;
-ZjCj=cost(BV)*A-cost
-
+a=[-5 -1 1 0 0;-6 -5 0 1 0;-1 -4 0 0 1];
+cost=[-12 -10 0 0 0]
+cost=[cost 0]
+b=[-10;-30;-8]
+A=[a b]
+bv=[3 4 5]
+zjcj=cost(bv)*A-cost
+var={'x1','x2','s1','s2','s3','sol'}
+simp_table=[zjcj;A]
+array2table(simp_table,'VariableNames',var)
+Run=true
+sol = A(:,end)
+while Run 
+if any(sol(1:end-1)<0)
+fprintf('sol not feasible')
+[leave_val,pvt_row]=min(sol)
+if all(A(pvt_row,:)>=0)
+error('infeasible solution')
 else
-    RUN=false;
-    fprintf('Feasible')
+col=A(pvt_row,1:end-1)
+zc=zjcj(1:end-1)
+for i=1:size(a,2)
+if col(i)<0
+ratio(i)=abs(zjcj(i)/col(i))
+else
+ratio(i)=inf
+ end
+end
+[enter_value,pvt_col]=min(ratio)                               
+end
+pvt_key=A(pvt_row,pvt_col)
+A(pvt_row,:)=A(pvt_row,:)/pvt_key
+for i=1:size(A,1)
+if i~=pvt_row
+i
+A(i,:)=A(i,:)-A(i,pvt_col)*A(pvt_row,:)
 end
 end
-
-FINALBFS=zeros(1,size(A,2));
-FINALBFS(BV)=A(:,end);
-FINALBFS(end)=-ZjCj(end);
-OPTBFS=array2table(FINALBFS);
-OPTBFS.Properties.VariableNames(1,1:size(FINALBFS,2))=variables
+bv(pvt_row)=pvt_col
+sol = A(:,end)
+zjcj=cost(bv)*A-cost
+new_table=[zjcj;A]
+ array2table(new_table,'VariableNames',var)
+else
+                Run=false;
+                fprintf('optimal sol is %f',zjcj(end))
+end
+end
